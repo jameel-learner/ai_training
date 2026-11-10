@@ -82,6 +82,21 @@ def reset_sample_project() -> None:
     shutil.copytree(TEMPLATE_DIR, target, ignore=shutil.ignore_patterns("__pycache__"))
 
 
+def clear_folder(folder: str) -> Path:
+    """Delete everything inside a workspace project folder, keeping the (now empty) folder."""
+    target = resolve(folder)
+    if target == WORKSPACE or target == SCRATCH or SCRATCH in target.parents:
+        raise ValueError(f"Refusing to clear '{folder}': name a project folder inside the workspace")
+    if not target.is_dir():
+        raise ValueError(f"Folder '{folder}' does not exist in the workspace")
+    for child in target.iterdir():
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    return target
+
+
 def resolve(path: str) -> Path:
     """Resolve a path relative to the workspace and refuse anything outside it."""
     p = Path(path.strip().strip("'\""))

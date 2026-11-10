@@ -420,7 +420,14 @@ const COMMANDS = {
   '/history': ['time travel: checkpoints of last agent run', showHistory],
   '/files': ['toggle workspace file panel', () => $('#ftoggle').click()],
   '/cat': ['path — show a workspace file', a => a ? cat(a) : note('usage: /cat path', 'red')],
-  '/reset-sample': ['restore sample_project to original', async () => { await fetch('/api/workspace/reset-sample', { method: 'POST' }); refreshFiles(); note('sample_project restored'); }],
+  '/reset-sample': ['[folder] — empty a workspace folder; no folder = restore sample_project', async a => {
+    if (a && !confirm(`Delete everything inside workspace/${a}/? This cannot be undone.`)) return note('reset cancelled');
+    const r = await fetch('/api/workspace/reset-sample', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ folder: a || '' }) });
+    const j = await r.json().catch(() => ({}));
+    refreshFiles();
+    if (!r.ok) return note('Reset failed: ' + esc(j.detail || r.status), 'red');
+    note(j.action === 'cleared' ? `Emptied <span class="acc">workspace/${esc(j.folder)}/</span>` : 'sample_project restored');
+  }],
 };
 async function showHistory() {
   if (!S.agentThread) return note('No agent run yet.', 'red');

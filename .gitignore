@@ -7,3 +7,6 @@ __pycache__/
 
 # Generated workspace projects
 sprint5/codegen/workspace/
+
+# Secrets
+.env

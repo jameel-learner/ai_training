@@ -4,7 +4,7 @@
   bugbot (NB2)  generate -> execute -> review self-correcting loop, rules, inline edit
   agent  (NB3)  plan -> code (seq/parallel) -> review -> human approval -> apply -> test
 
-Run:  python server.py   then open http://127.0.0.1:8765
+Run:  python server.py [--port 8765]   then open http://127.0.0.1:<port>
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from agents.common import (
     DEFAULT_MODEL,
     OPENROUTER_API_KEY,
     WORKSPACE,
+    clear_folder,
     ensure_workspace,
     list_files,
     read_text,
@@ -147,12 +148,27 @@ def agent_history(thread_id: str):
     return {"history": orchestrator.history(thread_id)}
 
 
+class ResetReq(BaseModel):
+    folder: str = ""  # blank -> restore sample_project from the template
+
+
 @app.post("/api/workspace/reset-sample")
-def reset_sample():
-    reset_sample_project()
-    return {"ok": True}
+def reset_sample(req: ResetReq | None = None):
+    folder = (req.folder if req else "").strip()
+    if not folder:
+        reset_sample_project()
+        return {"ok": True, "action": "restored", "folder": "sample_project"}
+    try:
+        return {"ok": True, "action": "cleared", "folder": rel(clear_folder(folder))}
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run Codegen Studio.")
+    parser.add_argument("--port", type=int, default=8765, help="port to listen on (default: 8765)")
+    args = parser.parse_args()
     # Bound to localhost only: the agents can write files and run code/shell commands.
-    uvicorn.run(app, host="127.0.0.1", port=8765)
+    uvicorn.run(app, host="127.0.0.1", port=args.port)

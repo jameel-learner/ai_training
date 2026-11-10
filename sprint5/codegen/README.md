@@ -57,6 +57,12 @@ python server.py
 ```
 Then open **http://127.0.0.1:8765**.
 
+To use a different port, pass `--port`:
+```bash
+python server.py --port 9000
+```
+Then open **http://127.0.0.1:9000**.
+
 The server listens on **localhost only**. This is on purpose, because the agents can write files and run code and shell commands on your machine.
 
 ---
@@ -87,7 +93,7 @@ codegen/
 ### The workspace sandbox
 - All file operations are limited to `codegen/workspace/`. A path that resolves outside it is rejected with `Path '...' is outside the workspace sandbox`.
 - Paths are always **relative to the workspace root**, for example `sample_project/app.py`. A leading `workspace/` added by the model is removed automatically.
-- The first time the server starts with an empty workspace, it copies `sample_project_template/` to `workspace/sample_project/`. It never re-creates the project on its own after that. Use `/reset-sample` to restore it.
+- The first time the server starts with an empty workspace, it copies `sample_project_template/` to `workspace/sample_project/`. It never re-creates the project on its own after that. Use `/reset-sample` to restore it, or `/reset-sample <folder>` to empty any other project folder.
 - `.git`, `__pycache__`, `.venv`, `venv`, `node_modules` and `.scratch` are hidden from file listings and search.
 - Code that the agents run does **not** receive `OPENROUTER_API_KEY` in its environment.
 
@@ -129,7 +135,7 @@ The **files** button in the top-right corner, or `/files`, opens a panel listing
 | `/history` | *(agent)* "Time travel": list every checkpoint of the last agent run |
 | `/files` | Show or hide the workspace file panel |
 | `/cat <path>` | Print a workspace file in the log |
-| `/reset-sample` | Restore `workspace/sample_project` to the original template |
+| `/reset-sample [folder]` | With a folder name, e.g. `/reset-sample try1`, **delete everything inside** `workspace/<folder>/` and keep the empty folder. The UI asks you to confirm first. With no folder, restore `workspace/sample_project` from `sample_project_template/`. |
 
 The command toggles (`/shell`, `/review`, `/parallel`) work without an argument and flip the current value.
 
@@ -277,7 +283,7 @@ The UI is a thin client over these endpoints. Streaming endpoints return **Serve
 | `POST /api/agent/start` | `{feature_request, thread_id, project?="sample_project", parallel?=false, model?, rules?}` | SSE: `node` events, then `interrupt` with `{plan, review_result, review_attempts, files[{filepath, action, code, explanation, diff}]}` |
 | `POST /api/agent/resume` | `{thread_id, decision: "approve"\|"reject", feedback?}` | SSE: continues the run. Ends with `done` `{status, test_output, files}`, or another `interrupt`. |
 | `GET /api/agent/history/{thread_id}` | — | `{history: [checkpoints]}` |
-| `POST /api/workspace/reset-sample` | — | `{ok: true}` |
+| `POST /api/workspace/reset-sample` | `{folder?}` | `{ok, action, folder}`. Blank `folder` restores `sample_project` (`action: "restored"`). Otherwise it empties that folder (`action: "cleared"`). Returns 400 if the folder is missing, is the workspace root, or is outside the workspace. |
 
 ---
 
@@ -317,7 +323,7 @@ Feature requests to try in agent mode:
 | Symptom | Fix |
 |---|---|
 | Red banner "OPENROUTER_API_KEY not found" | Put the key in `sprint5/.env` (one level above `codegen/`) and restart `python server.py` |
-| "Backend not reachable" | The server isn't running, or the page wasn't opened at `http://127.0.0.1:8765` |
+| "Backend not reachable" | The server isn't running, or the page wasn't opened at `http://127.0.0.1:<port>` (8765 unless you passed `--port`) |
 | Search says `keyword` instead of `faiss` | The embedding call failed. Check the key and `CODEGEN_EMBEDDING_MODEL`. Search still works. |
 | `Coder could not produce valid code for …` | The model's edits didn't match the file or had syntax errors 3 times in a row. Try again, rephrase, or use a stronger model. |
 | `Path '…' is outside the workspace sandbox` | Use paths relative to `workspace/` |
