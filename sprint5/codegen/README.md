@@ -63,6 +63,14 @@ python server.py --port 9000
 ```
 Then open **http://127.0.0.1:9000**.
 
+### Two interfaces, same backend
+| Address | Interface |
+|---|---|
+| `http://127.0.0.1:<port>/studio` | **Studio**: a friendly chat-style interface with a conversation sidebar, a mode picker, collapsible steps and an approval card (see §3a) |
+| `http://127.0.0.1:<port>/` | **Classic**: the terminal-style interface with slash commands (see §3) |
+
+Both use the same API, workspace and rules, so you can switch between them freely.
+
 The server listens on **localhost only**. This is on purpose, because the agents can write files and run code and shell commands on your machine.
 
 ---
@@ -80,7 +88,8 @@ codegen/
 │   ├── bugbot.py                bugbot mode (NB2)
 │   ├── orchestrator.py          agent mode  (NB3)
 │   └── codebase.py              FAISS / keyword search over workspace files
-├── static/index.html            The whole browser UI (single file)
+├── static/index.html            Classic terminal-style UI (served at /)
+├── static/studio.html           Friendly chat-style UI (served at /studio)
 ├── sample_project_template/     Pristine copy of the demo project
 │   ├── app.py                   Streamlit "ChatGPT clone" UI
 │   ├── chat.py                  OpenRouter streaming client
@@ -99,7 +108,7 @@ codegen/
 
 ---
 
-## 3. Using the interface
+## 3. Using the classic interface (`/`)
 
 The UI looks like a terminal: a scrolling log, a `>` prompt at the bottom, and a status line below the prompt.
 
@@ -140,6 +149,41 @@ The **files** button in the top-right corner, or `/files`, opens a panel listing
 The command toggles (`/shell`, `/review`, `/parallel`) work without an argument and flip the current value.
 
 **Saved settings:** mode, model, session rules, shell, parallel, review, attempts and project are saved in the browser's `localStorage`, so they are kept after a page reload. Conversation memory is not kept, because it lives in server memory (see §8).
+
+---
+
+## 3a. Using the Studio interface (`/studio`)
+
+Studio does the same things as the classic interface through buttons and menus instead of slash commands.
+
+**Layout**
+- **Left sidebar**: *New conversation*, your recent conversations (click to reopen, hover to delete), and links to *Workspace files*, *Settings* and the *Classic terminal UI*. The sidebar button at the top left hides or shows it.
+- **Centre**: the conversation. A new conversation starts with three mode cards and some example prompts you can click.
+- **Message box** at the bottom:
+  - **＋** opens a box where you paste existing code for Bugbot to change. This is the same as `/edit`, and it switches to Bugbot.
+  - The **mode pill** (💬 Chat / 🐞 Bugbot / 🛠️ Agent) picks the mode.
+  - In Agent mode, a **folder pill** picks the project folder or creates a new one.
+  - The current model is shown on the right. **Enter** sends, **Shift+Enter** adds a new line. While a reply is running, the send button becomes **Stop** (or press **Esc**).
+
+**What you see in each mode**
+- **Chat**: the answer streams in as formatted text, and code blocks have a **Copy** button. Tool calls (read, write, list, search, shell) are grouped in a collapsible *Used N tools* box. Each one can show its output.
+- **Bugbot**: a collapsible *How it got there* timeline (wrote → ran → fixed → reviewed), then a result card with the final code, its output, **Save to workspace…** and **Keep editing this code**.
+- **Agent**: a step timeline (plan → code → AI review), then a **Review these changes** card with the plan, the reviewer's notes and a colour-coded diff for each file. Click **Apply changes** to save and test, or write what should be different and click **Ask for changes**. Typing feedback in the message box while a review card is waiting also asks for changes.
+
+**Settings panel** (top right, or in the sidebar)
+| Setting | Same as |
+|---|---|
+| Model | `/model` |
+| Extra rules for this browser | `/rules` |
+| Allow shell commands | `/shell` |
+| AI review / Maximum attempts | `/review` / `/attempts` |
+| Project folder / Write files in parallel | `/project` / `/parallel` |
+| Restore sample_project / Empty project folder… | `/reset-sample` / `/reset-sample <folder>` |
+| Theme (system, light or dark) | Studio only |
+
+**Files panel** (top right): a folder tree of the workspace. Click a file to preview it, with a Copy button.
+
+**Saved in your browser:** settings and up to 40 recent conversations are kept in `localStorage`. After a server restart, old conversations can still be read, but you can't continue them: chat memory and waiting agent runs live in server memory.
 
 ---
 

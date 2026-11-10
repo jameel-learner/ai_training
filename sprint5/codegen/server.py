@@ -91,6 +91,12 @@ def index():
     return FileResponse(BASE_DIR / "static" / "index.html")
 
 
+@app.get("/studio")
+def studio():
+    """Friendly chat-style UI (same API as the classic terminal UI at /)."""
+    return FileResponse(BASE_DIR / "static" / "studio.html")
+
+
 @app.get("/api/config")
 def config():
     dirs = sorted({f.split("/")[0] for f in list_files(".") if "/" in f})
@@ -170,5 +176,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Codegen Studio.")
     parser.add_argument("--port", type=int, default=8765, help="port to listen on (default: 8765)")
     args = parser.parse_args()
+    print(f"\n  Codegen Studio   http://127.0.0.1:{args.port}/studio   (friendly UI)")
+    print(f"                   http://127.0.0.1:{args.port}/         (classic terminal UI)\n")
     # Bound to localhost only: the agents can write files and run code/shell commands.
     uvicorn.run(app, host="127.0.0.1", port=args.port)
