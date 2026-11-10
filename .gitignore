@@ -1,0 +1,9 @@
+# Python bytecode cache (any directory)
+__pycache__/
+*.py[cod]
+
+# Virtual environments (any directory)
+.venv/
+
+# Generated workspace projects
+sprint5/codegen/workspace/

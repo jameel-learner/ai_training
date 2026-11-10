@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codegen Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<style>
+:root{
+  --bg:#141413; --panel:#1c1c1a; --panel2:#232320; --fg:#e8e6dc; --dim:#8b8a82; --faint:#5c5b55;
+  --border:#3a3935; --accent:#d97757; --green:#7cc47f; --red:#ef6f6c; --yellow:#e6b450; --blue:#7ab4e8; --purple:#b79cf0;
+  --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Consolas,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.55 var(--mono)}
+body{display:flex;flex-direction:column}
+a{color:var(--blue)}
+#main{flex:1;overflow-y:auto;scroll-behavior:smooth}
+#log{max-width:1040px;margin:0 auto;padding:18px 16px 8px}
+.welcome{border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:18px}
+.welcome b{color:var(--accent)} .welcome .d{color:var(--dim)}
+.welcome .tips{margin-top:8px;color:var(--dim)}
+.blk{margin:10px 0;white-space:normal;word-wrap:break-word}
+.user{color:var(--dim);background:var(--panel);border-left:2px solid var(--faint);padding:6px 10px;white-space:pre-wrap;border-radius:3px}
+.user::before{content:"> ";color:var(--fg)}
+.row{display:flex;gap:8px}
+.dot{flex:none;width:12px;color:var(--fg)}
+.dot.ok{color:var(--green)} .dot.err{color:var(--red)} .dot.warn{color:var(--yellow)} .dot.run{color:var(--dim);animation:blink 1s infinite}
+.dot.acc{color:var(--accent)}
+@keyframes blink{50%{opacity:.25}}
+.body{flex:1;min-width:0}
+.title b{color:var(--fg)} .title .arg{color:var(--dim)}
+.res{color:var(--dim);margin-left:4px;white-space:pre-wrap}
+.res::before{content:"⎿  ";color:var(--faint)}
+.dimtxt{color:var(--dim)} .green{color:var(--green)} .red{color:var(--red)} .yellow{color:var(--yellow)} .acc{color:var(--accent)}
+.md p{margin:0 0 8px} .md p:last-child{margin-bottom:0}
+.md code{background:var(--panel2);padding:1px 4px;border-radius:3px;color:var(--purple)}
+.md pre{background:var(--panel);border:1px solid var(--border);padding:10px;border-radius:6px;overflow-x:auto}
+.md pre code{background:none;color:var(--fg);padding:0}
+.md ul,.md ol{margin:4px 0 8px;padding-left:22px}
+.md h1,.md h2,.md h3{font-size:14px;color:var(--accent);margin:10px 0 6px}
+.md table{border-collapse:collapse} .md td,.md th{border:1px solid var(--border);padding:3px 8px}
+pre.code{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;margin:6px 0;overflow-x:auto;white-space:pre;font:13px/1.5 var(--mono);max-height:460px}
+details{margin:2px 0 2px 4px} summary{cursor:pointer;color:var(--dim);list-style:none} summary::before{content:"▸ ";color:var(--faint)}
+details[open]>summary::before{content:"▾ "}
+.diff .add{color:var(--green);background:rgba(124,196,127,.08);display:block}
+.diff .del{color:var(--red);background:rgba(239,111,108,.08);display:block}
+.diff .hunk{color:var(--blue);display:block} .diff .meta{color:var(--dim);display:block}
+.box{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:12px 0;background:var(--panel)}
+.box.approve{border-color:var(--accent)}
+.box h4{margin:0 0 8px;color:var(--accent);font-size:14px}
+.opts{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.opt{all:unset;cursor:pointer;padding:4px 8px;border-radius:4px;color:var(--fg)}
+.opt:hover,.opt:focus-visible{background:var(--panel2);color:var(--accent)}
+.opt .n{color:var(--dim);margin-right:6px}
+.fb{display:flex;gap:8px;margin-top:6px}
+.fb input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--fg);font:inherit;padding:5px 8px}
+button.small{background:var(--panel2);border:1px solid var(--border);color:var(--fg);font:inherit;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px}
+button.small:hover{border-color:var(--accent);color:var(--accent)}
+table.hist{border-collapse:collapse;font-size:13px;margin-top:4px} table.hist td,table.hist th{padding:2px 10px;border-bottom:1px solid var(--border);text-align:left}
+table.hist th{color:var(--dim);font-weight:normal}
+#spinner{max-width:1040px;margin:0 auto;padding:4px 16px;color:var(--accent);display:none}
+#spinner .s{display:inline-block;width:14px}
+#spinner .h{color:var(--dim)}
+#composer{max-width:1040px;width:100%;margin:0 auto;padding:6px 16px 10px;position:relative}
+#editbox{display:none;margin-bottom:8px}
+#editbox label{color:var(--dim);font-size:12px}
+#editbox textarea{width:100%;height:150px;margin-top:4px;background:var(--panel);border:1px dashed var(--yellow);border-radius:6px;color:var(--fg);font:13px/1.5 var(--mono);padding:8px;resize:vertical}
+.inputwrap{display:flex;gap:8px;border:1px solid var(--border);border-radius:8px;padding:9px 12px;background:var(--bg)}
+.inputwrap:focus-within{border-color:var(--dim)}
+.inputwrap .p{color:var(--fg)}
+#input{flex:1;background:transparent;border:none;outline:none;color:var(--fg);font:inherit;resize:none;height:22px;max-height:240px;padding:0}
+#input::placeholder{color:var(--faint)}
+#status{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:12px;padding:5px 4px 0}
+#status .mode{color:var(--accent)} #status .mode.bugbot{color:var(--yellow)} #status .mode.agent{color:var(--purple)}
+#projSel{background:var(--panel);color:var(--purple);border:1px solid var(--border);border-radius:4px;font:inherit;font-size:12px;padding:0 4px;cursor:pointer}
+#menu{position:absolute;bottom:100%;left:16px;right:16px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:4px 0;display:none;max-height:300px;overflow-y:auto}
+#menu div{padding:2px 12px;display:flex;gap:16px;cursor:pointer} #menu div .c{color:var(--fg);min-width:150px} #menu div .d{color:var(--dim)}
+#menu div.sel{background:var(--panel2)} #menu div.sel .c{color:var(--accent)}
+#files{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--panel);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column;z-index:5}
+#files.open{transform:none}
+#files header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--accent)}
+#filelist{overflow-y:auto;padding:6px 0;flex:1}
+#filelist div{padding:2px 14px;cursor:pointer;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#filelist div:hover{background:var(--panel2);color:var(--accent)}
+#filelist .dir{color:var(--dim)}
+#ftoggle{position:fixed;top:10px;right:14px;z-index:4}
+@media (max-width:640px){#status .hint{display:none}}
+</style>
+</head>
+<body>
+<button id="ftoggle" class="small" title="Workspace files (/files)">files</button>
+<aside id="files"><header><span>workspace</span><span><button class="small" id="frefresh">refresh</button> <button class="small" id="fclose">×</button></span></header><div id="filelist"></div></aside>
+
+<div id="main"><div id="log">
+  <div class="welcome">
+    <div><b>✻</b> Welcome to <b>Codegen Studio</b> <span class="d">— notebooks 1–3 as one coding agent</span></div>
+    <div class="d" id="cwd">cwd: …</div>
+    <div class="tips">
+      <div><span class="acc">chat</span>   NB1 · tool-calling code generator (read / write / list / search / shell) with memory</div>
+      <div><span class="yellow">bugbot</span> NB2 · generate → execute → review loop · rules · inline edit (/edit)</div>
+      <div><span style="color:var(--purple)">agent</span>  NB3 · RAG plan → code (seq/parallel) → AI review → your approval → apply → test</div>
+      <div style="margin-top:6px">shift+tab switches mode · / for commands · esc interrupts</div>
+    </div>
+  </div>
+</div>
+<div id="spinner"><span class="s">✻</span> <span id="spinText">Thinking…</span> <span class="h" id="spinTime"></span></div>
+</div>
+
+<div id="composer">
+  <div id="menu"></div>
+  <div id="editbox"><label>Existing code to edit — bugbot will modify it per your instructions (inline edit / Cmd+K)</label><textarea id="editcode" spellcheck="false" placeholder="paste code here"></textarea></div>
+  <div class="inputwrap"><span class="p">&gt;</span><textarea id="input" rows="1" spellcheck="false" autofocus></textarea></div>
+  <div id="status"><span id="statusL"></span><span class="hint">shift+tab mode · / commands · esc interrupt · shift+enter newline</span></div>
+</div>
+
+<script>
+// ------------------------------------------------------------------ state
+const $ = s => document.querySelector(s);
+const log = $('#log'), main = $('#main'), input = $('#input');
+const MODES = ['chat', 'bugbot', 'agent'];
+const PLACEHOLDER = {
+  chat: 'Ask me to write, read or change code in the workspace…',
+  bugbot: 'Describe a program — it will be generated, executed, fixed and reviewed…',
+  agent: 'Describe a feature for the project — plan, code, review, then you approve…',
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('cgs.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('cgs.' + k, JSON.stringify(v)); } catch {} },
+};
+const S = {
+  mode: store.get('mode', 'chat'), model: store.get('model', ''), rules: store.get('rules', ''),
+  shell: store.get('shell', false), parallel: store.get('parallel', false), review: store.get('review', true),
+  attempts: store.get('attempts', 3), project: store.get('project', 'sample_project'),
+  projects: [], chatThread: uid(), agentThread: null, running: false, abort: null, pending: null, lastCode: '', defaultModel: '',
+};
+function save() { ['mode','model','rules','shell','parallel','review','attempts','project'].forEach(k => store.set(k, S[k])); }
+function uid() { return (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())); }
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function md(text) {
+  try { if (window.marked && window.DOMPurify) return DOMPurify.sanitize(marked.parse(text)); } catch {}
+  return '<p style="white-space:pre-wrap">' + esc(text) + '</p>';
+}
+function stick() { const near = main.scrollHeight - main.scrollTop - main.clientHeight < 160; return () => { if (near) main.scrollTop = main.scrollHeight; }; }
+function add(html, cls = 'blk') { const s = stick(); const d = document.createElement('div'); d.className = cls; d.innerHTML = html; log.appendChild(d); s(); return d; }
+function row(dotCls, glyph, inner) { return add(`<div class="row"><span class="dot ${dotCls}">${glyph}</span><div class="body">${inner}</div></div>`); }
+function note(html, cls = 'dimtxt') { return row(cls === 'red' ? 'err' : '', '⏺', `<span class="${cls}">${html}</span>`); }
+function codeBlock(code, open = false, label = null) {
+  const lines = (code || '').split('\n').length;
+  return `<details${open ? ' open' : ''}><summary>${esc(label || `${lines} lines`)}</summary><pre class="code">${esc(code)}</pre></details>`;
+}
+function diffBlock(diff) {
+  if (!diff) return '<div class="dimtxt">(no changes)</div>';
+  const html = diff.split('\n').map(l => {
+    const c = l.startsWith('+++') || l.startsWith('---') ? 'meta' : l.startsWith('@@') ? 'hunk' : l.startsWith('+') ? 'add' : l.startsWith('-') ? 'del' : '';
+    return c ? `<span class="${c}">${esc(l) || ' '}</span>` : esc(l) + '\n';
+  }).join('');
+  return `<pre class="code diff">${html}</pre>`;
+}
+
+// ------------------------------------------------------------------ status / spinner
+function renderStatus() {
+  const flags = [];
+  if (S.mode === 'chat') flags.push('shell ' + (S.shell ? 'on' : 'off'));
+  if (S.mode === 'bugbot') flags.push('review ' + (S.review ? 'on' : 'off'), 'attempts ' + S.attempts, $('#editbox').style.display === 'block' ? 'inline-edit' : '');
+  if (S.mode === 'agent') flags.push(S.parallel ? 'parallel' : 'sequential');
+  if (S.rules) flags.push('rules ✓');
+  const opts = [...new Set([...S.projects, S.project])].map(p => `<option${p === S.project ? ' selected' : ''}>${esc(p)}</option>`).join('');
+  const picker = S.mode === 'agent'
+    ? ` · project <select id="projSel" title="Folder in workspace/ that agent mode works on">${opts}<option value="__new__">+ new folder…</option></select>`
+    : '';
+  $('#statusL').innerHTML = `<span class="mode ${S.mode}">⏵⏵ ${S.mode} mode</span> · ${esc(S.model || S.defaultModel)}${picker} · ${flags.filter(Boolean).map(esc).join(' · ')}`;
+  const sel = $('#projSel');
+  if (sel) sel.onchange = () => {
+    let v = sel.value;
+    if (v === '__new__') v = (prompt('New project folder name (inside workspace/):') || '').trim().replace(/[\\/]+/g, '_');
+    if (v) setProject(v); else renderStatus();
+  };
+  input.placeholder = S.pending ? 'Type feedback and press enter to reject & revise — or choose an option above' : PLACEHOLDER[S.mode];
+}
+const GLYPHS = ['·','✢','✳','✶','✻','✽','✻','✶','✳','✢'];
+let spinTimer = null, spinStart = 0, gi = 0;
+function spin(text) {
+  $('#spinText').textContent = text + '…';
+  if (spinTimer) return;
+  spinStart = Date.now(); $('#spinner').style.display = 'block';
+  spinTimer = setInterval(() => {
+    $('#spinner .s').textContent = GLYPHS[gi++ % GLYPHS.length];
+    $('#spinTime').textContent = `(${Math.floor((Date.now() - spinStart) / 1000)}s · esc to interrupt)`;
+  }, 120);
+}
+function stopSpin() { clearInterval(spinTimer); spinTimer = null; $('#spinner').style.display = 'none'; }
+
+// ------------------------------------------------------------------ SSE over fetch
+async function stream(url, body, onEvent) {
+  S.running = true; S.abort = new AbortController();
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: S.abort.signal });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const parts = buf.split('\n\n'); buf = parts.pop();
+      for (const p of parts) {
+        const line = p.split('\n').find(l => l.startsWith('data: '));
+        if (line) onEvent(JSON.parse(line.slice(6)));
+      }
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') note('Interrupted by user', 'red');
+    else note('Error: ' + esc(e.message), 'red');
+  } finally {
+    S.running = false; S.abort = null; stopSpin(); renderStatus(); refreshFiles();
+  }
+}
+
+// ------------------------------------------------------------------ NB1: chat
+const TOOL = {
+  read_file: ['Read', a => a.filepath], write_file: ['Write', a => a.filepath], list_directory: ['List', a => a.directory || '.'],
+  search_codebase: ['Search', a => `"${a.query}"`], execute_shell: ['Bash', a => a.command],
+};
+function toolSummary(name, input, out) {
+  const lines = out.split('\n');
+  if (out.startsWith('Error') || out.includes('Traceback')) return `<span class="red">${esc(lines.slice(0, 4).join('\n'))}</span>`;
+  if (name === 'read_file') return `Read ${lines.length} lines` + codeBlock(out, false, 'show contents');
+  if (name === 'write_file') return esc(out) + codeBlock(input.content || '', false, 'show code');
+  if (name === 'list_directory') return `${lines.length} entries` + codeBlock(out, false, 'show');
+  if (name === 'search_codebase') return `${(out.match(/^--- /gm) || []).length} snippets` + codeBlock(out, false, 'show');
+  return esc(lines.slice(0, 6).join('\n')) + (lines.length > 6 ? `\n… +${lines.length - 6} lines` + codeBlock(out, false, 'show all') : '');
+}
+async function runChat(text) {
+  let cur = null, raw = '';
+  const tools = {};
+  spin('Thinking');
+  await stream('/api/chat', { message: text, thread_id: S.chatThread, model: S.model || null, rules: S.rules, allow_shell: S.shell }, ev => {
+    if (ev.type === 'token') {
+      if (!cur) { raw = ''; cur = row('', '⏺', '<div class="md"></div>').querySelector('.md'); }
+      raw += ev.text; const s = stick(); cur.innerHTML = md(raw); s();
+    } else if (ev.type === 'message_end') { cur = null; }
+    else if (ev.type === 'tool_start') {
+      const [label, argf] = TOOL[ev.name] || [ev.name, a => JSON.stringify(a)];
+      let arg = ''; try { arg = argf(ev.input || {}) ?? ''; } catch {}
+      spin(label === 'Write' ? 'Writing' : label === 'Bash' ? 'Running' : 'Exploring');
+      const el = row('run', '⏺', `<div class="title"><b>${label}</b><span class="arg">(${esc(String(arg).slice(0, 140))})</span></div><div class="res">running…</div>`);
+      tools[ev.id] = { el, input: ev.input || {} };
+    } else if (ev.type === 'tool_end') {
+      const t = tools[ev.id]; if (!t) return;
+      const bad = /^Error|Traceback/.test(ev.output);
+      t.el.querySelector('.dot').className = 'dot ' + (bad ? 'err' : 'ok');
+      t.el.querySelector('.res').innerHTML = toolSummary(ev.name, t.input, ev.output);
+      spin('Thinking');
+    } else if (ev.type === 'error') note(esc(ev.message), 'red');
+  });
+}
+
+// ------------------------------------------------------------------ NB2: bugbot
+async function runBugbot(text) {
+  const existing = $('#editbox').style.display === 'block' ? $('#editcode').value : '';
+  if (existing) row('warn', '✎', `<span class="yellow">Inline edit</span>` + codeBlock(existing, false, 'original code'));
+  spin('Generating');
+  await stream('/api/bugbot', { task: text, existing_code: existing, rules: S.rules, max_attempts: S.attempts, review: S.review, model: S.model || null }, ev => {
+    if (ev.type === 'node') {
+      const d = ev.data;
+      if (ev.node === 'generate') {
+        row('acc', '⏺', `<div class="title"><b>Generate</b><span class="arg">(attempt ${d.attempts}/${S.attempts})</span></div><div class="res">${esc(d.explanation)}</div>${codeBlock(d.code, false, `show code · ${d.code.split('\n').length} lines`)}`);
+        spin('Executing');
+      } else if (ev.node === 'execute') {
+        if (d.status === 'executed') row('ok', '⏺', `<div class="title"><b>Execute</b> <span class="green">✓ exit 0</span></div>${d.execution_result ? `<pre class="code">${esc(d.execution_result)}</pre>` : '<div class="res">(no output)</div>'}`);
+        else row('err', '⏺', `<div class="title"><b>Execute</b> <span class="red">✗ failed</span></div><pre class="code red">${esc(d.error.trim().split('\n').slice(-12).join('\n'))}</pre>`);
+        spin(d.status === 'executed' && S.review ? 'Reviewing' : 'Fixing');
+      } else if (ev.node === 'review') {
+        const ok = d.status === 'approved';
+        row(ok ? 'ok' : 'warn', '⏺', `<div class="title"><b>Review</b> <span class="${ok ? 'green' : 'yellow'}">${ok ? '✓ approved' : '↻ revision requested'}</span></div><div class="res">${esc(d.review_feedback)}</div>`);
+        if (!ok) spin('Revising');
+      }
+    } else if (ev.type === 'done') {
+      S.lastCode = ev.code;
+      const good = ev.status === 'approved' || ev.status === 'executed';
+      const label = { approved: 'Success — executed and approved', executed: 'Success — executed', exec_failed: 'Gave up — still failing', review_failed: 'Runs, but reviewer still has concerns' }[ev.status] || ev.status;
+      const b = add(`<h4>${good ? '✓' : '✗'} ${esc(label)} <span class="dimtxt">· ${ev.attempts} attempt(s)</span></h4>
+        <div class="md">${md(ev.explanation || '')}</div>
+        <pre class="code">${esc(ev.code)}</pre>
+        <div style="display:flex;gap:8px"><button class="small" data-a="copy">copy</button><button class="small" data-a="save">save to workspace…</button><button class="small" data-a="edit">edit further (/edit)</button></div>`, 'box');
+      b.querySelector('[data-a=copy]').onclick = () => navigator.clipboard?.writeText(ev.code);
+      b.querySelector('[data-a=save]').onclick = () => { const p = prompt('Save as (relative to workspace):', 'generated/solution.py'); if (p) saveCode(p, ev.code); };
+      b.querySelector('[data-a=edit]').onclick = () => { $('#editcode').value = ev.code; toggleEdit(true); input.focus(); };
+    } else if (ev.type === 'error') note(esc(ev.message), 'red');
+  });
+}
+async function saveCode(path, code) {
+  const r = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, content: code }) });
+  const j = await r.json().catch(() => ({}));
+  r.ok ? note(`Saved <span class="acc">${esc(j.path)}</span>`) : note('Save failed: ' + esc(j.detail || r.status), 'red');
+  refreshFiles();
+}
+
+// ------------------------------------------------------------------ NB3: agent
+function agentHandler(ev) {
+  if (ev.type === 'node') {
+    const d = ev.data;
+    switch (ev.node) {
+      case 'plan':
+        row('acc', '⏺', `<div class="title"><b>Plan</b> <span class="arg">(searched codebase · ${d.file_tasks.length} file task(s))</span></div><div class="res">${esc(d.plan)}</div>` +
+          d.file_tasks.map(t => `<div class="dimtxt" style="margin-left:28px">${t.action === 'create' ? '<span class="green">+ create</span>' : '<span class="yellow">~ modify</span>'} ${esc(t.filepath)} <span class="dimtxt">— ${esc(t.description)}</span></div>`).join(''));
+        spin(S.parallel ? 'Coding files in parallel' : 'Coding'); break;
+      case 'code':
+        row('ok', '⏺', `<div class="title"><b>Code</b></div>` + d.generated_code.map(i => `<div class="res">${esc(i.filepath)} <span class="dimtxt">(${i.lines} lines) — ${esc(i.explanation)}</span></div>`).join(''));
+        spin('Reviewing'); break;
+      case 'code_file':
+        d.generated_code.forEach(i => row('ok', '⏺', `<div class="title"><b>Code</b><span class="arg"> [parallel] ${esc(i.filepath)}</span></div><div class="res">${i.lines} lines — ${esc(i.explanation)}</div>`)); break;
+      case 'collect': spin('Reviewing'); break;
+      case 'review': {
+        const ok = d.status === 'approved';
+        row(ok ? 'ok' : 'warn', '⏺', `<div class="title"><b>AI Review</b> <span class="arg">[${d.review_attempts}]</span> <span class="${ok ? 'green' : 'yellow'}">${ok ? '✓ approved' : '↻ needs revision'}</span></div><div class="res">${esc(d.review_result)}</div>`);
+        spin(ok ? 'Preparing changes for your review' : 'Revising'); break;
+      }
+      case 'human_review':
+        row(d.human_decision === 'approve' ? 'ok' : 'warn', '⏺', `<b>You ${d.human_decision === 'approve' ? 'approved' : 'rejected'}</b>${d.human_feedback ? `<div class="res">${esc(d.human_feedback)}</div>` : ''}`);
+        spin(d.human_decision === 'approve' ? 'Applying' : 'Revising'); break;
+      case 'apply': row('ok', '⏺', '<b>Apply</b><div class="res">changes written to disk</div>'); spin('Testing'); break;
+      case 'test': {
+        const ok = d.status === 'tests_passed';
+        row(ok ? 'ok' : 'err', '⏺', `<div class="title"><b>Test</b> <span class="${ok ? 'green' : 'red'}">${ok ? '✓ pass' : '✗ fail'}</span></div><pre class="code">${esc(d.test_output)}</pre>`); break;
+      }
+    }
+  } else if (ev.type === 'interrupt') { stopSpin(); showApproval(ev.payload); }
+  else if (ev.type === 'done') { note(`<span class="acc">✻ Done</span> — ${esc(ev.status)} · ${ev.files.length} file(s) · /history for time travel`, ''); }
+  else if (ev.type === 'error') note(esc(ev.message), 'red');
+}
+async function runAgent(text) {
+  S.agentThread = uid();
+  spin('Searching codebase & planning');
+  await stream('/api/agent/start', { feature_request: text, thread_id: S.agentThread, project: S.project, parallel: S.parallel, model: S.model || null, rules: S.rules }, agentHandler);
+}
+function showApproval(p) {
+  const files = p.files.map(f => `<div style="margin-top:10px"><b>${f.action === 'create' ? '<span class="green">Create</span>' : '<span class="yellow">Update</span>'}</b>(${esc(f.filepath)}) <span class="dimtxt">— ${esc(f.explanation)}</span>${diffBlock(f.diff)}</div>`).join('');
+  const box = add(`<h4>Apply these changes?</h4>
+    <div><span class="dimtxt">Plan:</span> ${esc(p.plan)}</div>
+    <div><span class="dimtxt">AI review (${p.review_attempts}):</span> ${esc(p.review_result)}</div>
+    ${files}
+    <div class="opts">
+      <button class="opt" data-a="approve"><span class="n">1.</span>Yes, apply changes and run tests</button>
+      <button class="opt" data-a="reject"><span class="n">2.</span>No, revise — tell the agent what to do differently</button>
+      <div class="fb"><input placeholder="optional feedback for option 2 (or type it in the main prompt)"></div>
+    </div>`, 'box approve');
+  S.pending = { box };
+  box.querySelector('[data-a=approve]').onclick = () => decide('approve', '');
+  box.querySelector('[data-a=reject]').onclick = () => decide('reject', box.querySelector('.fb input').value);
+  box.querySelector('.fb input').onkeydown = e => { if (e.key === 'Enter') decide('reject', e.target.value); };
+  renderStatus();
+}
+async function decide(decision, feedback) {
+  if (!S.pending || S.running) return;
+  S.pending.box.querySelectorAll('button,input').forEach(b => b.disabled = true);
+  S.pending.box.querySelector('.opts').innerHTML = `<div class="${decision === 'approve' ? 'green' : 'yellow'}">→ ${decision === 'approve' ? 'approved' : 'rejected'}${feedback ? ': ' + esc(feedback) : ''}</div>`;
+  S.pending = null; renderStatus();
+  spin(decision === 'approve' ? 'Applying' : 'Revising');
+  await stream('/api/agent/resume', { thread_id: S.agentThread, decision, feedback }, agentHandler);
+}
+
+// ------------------------------------------------------------------ files panel
+async function refreshFiles() {
+  try {
+    const { files } = await (await fetch('/api/files')).json();
+    const projects = [...new Set(files.filter(f => f.includes('/')).map(f => f.split('/')[0]))].sort();
+    if (projects.join() !== S.projects.join()) { S.projects = projects; renderStatus(); }
+    let last = '';
+    $('#filelist').innerHTML = files.map(f => {
+      const dir = f.includes('/') ? f.slice(0, f.lastIndexOf('/')) : '';
+      const head = dir !== last ? `<div class="dir">${esc(dir || '.')}/</div>` : '';
+      last = dir;
+      return head + `<div data-f="${esc(f)}" style="padding-left:${dir ? 28 : 14}px">${esc(f.split('/').pop())}</div>`;
+    }).join('') || '<div class="dir">(empty)</div>';
+  } catch {}
+}
+$('#filelist').onclick = e => { const f = e.target.dataset.f; if (f) cat(f); };
+$('#ftoggle').onclick = () => { $('#files').classList.toggle('open'); refreshFiles(); };
+$('#fclose').onclick = () => $('#files').classList.remove('open');
+$('#frefresh').onclick = refreshFiles;
+async function cat(path) {
+  const r = await fetch('/api/file?path=' + encodeURIComponent(path));
+  const j = await r.json();
+  r.ok ? row('', '⏺', `<div class="title"><b>Read</b><span class="arg">(${esc(path)})</span></div>${codeBlock(j.content, true)}`) : note(esc(j.detail), 'red');
+}
+
+// ------------------------------------------------------------------ commands
+function toggleEdit(force) {
+  const on = force ?? $('#editbox').style.display !== 'block';
+  $('#editbox').style.display = on ? 'block' : 'none';
+  if (on && S.mode !== 'bugbot') setMode('bugbot');
+  renderStatus();
+}
+function setMode(m) { S.mode = m; save(); renderStatus(); }
+function setProject(p) {
+  S.project = p; save(); renderStatus();
+  note(`Agent mode now works on <span class="acc">workspace/${esc(p)}/</span>` + (S.projects.includes(p) ? '' : ' <span class="dimtxt">(new — created when the agent writes its first file)</span>'));
+}
+const onoff = (v, cur) => v === 'on' ? true : v === 'off' ? false : !cur;
+const COMMANDS = {
+  '/help': ['show commands', () => note(Object.entries(COMMANDS).map(([k, [d]]) => `<span class="acc">${k}</span> ${esc(d)}`).join('<br>'), '')],
+  '/clear': ['start a fresh conversation', () => { [...log.querySelectorAll('.blk,.box')].forEach(e => e.remove()); S.chatThread = uid(); S.pending = null; renderStatus(); }],
+  '/mode': ['chat | bugbot | agent', a => MODES.includes(a) ? setMode(a) : note('usage: /mode chat|bugbot|agent', 'red')],
+  '/model': ['set OpenRouter model id (blank = default)', a => { S.model = a; save(); renderStatus(); note(`model → ${esc(a || S.defaultModel)}`); }],
+  '/rules': ['set coding rules (like .cursorrules); "clear" to remove', a => {
+    if (a === 'clear') S.rules = ''; else if (a) S.rules = a;
+    save(); renderStatus();
+    note((S.rules ? 'Session rules:<pre class="code">' + esc(S.rules) + '</pre>' : 'No session rules. Usage: /rules &lt;text&gt; · /rules clear<br>')
+      + 'Global rules from <span class="acc">codegen/rules.md</span> always apply to every mode (edit that file; no restart needed).');
+  }],
+  '/shell': ['on|off — let chat agent run shell commands', a => { S.shell = onoff(a, S.shell); save(); renderStatus(); note('shell tool ' + (S.shell ? '<span class="yellow">enabled</span>' : 'disabled')); }],
+  '/review': ['on|off — bugbot reviewer node', a => { S.review = onoff(a, S.review); save(); renderStatus(); }],
+  '/attempts': ['N — bugbot max attempts (1-6)', a => { const n = parseInt(a); if (n >= 1 && n <= 6) { S.attempts = n; save(); renderStatus(); } else note('usage: /attempts 1-6', 'red'); }],
+  '/edit': ['toggle inline-edit box (bugbot)', () => toggleEdit()],
+  '/parallel': ['on|off — agent codes files in parallel (Send API)', a => { S.parallel = onoff(a, S.parallel); save(); renderStatus(); }],
+  '/project': ['dir — agent target folder in workspace', a => { if (a) setProject(a); else note('project: ' + esc(S.project)); }],
+  '/history': ['time travel: checkpoints of last agent run', showHistory],
+  '/files': ['toggle workspace file panel', () => $('#ftoggle').click()],
+  '/cat': ['path — show a workspace file', a => a ? cat(a) : note('usage: /cat path', 'red')],
+  '/reset-sample': ['restore sample_project to original', async () => { await fetch('/api/workspace/reset-sample', { method: 'POST' }); refreshFiles(); note('sample_project restored'); }],
+};
+async function showHistory() {
+  if (!S.agentThread) return note('No agent run yet.', 'red');
+  const { history } = await (await fetch('/api/agent/history/' + S.agentThread)).json();
+  row('acc', '⏺', `<b>Time travel</b> <span class="dimtxt">— ${history.length} checkpoints</span><table class="hist"><tr><th>step</th><th>status</th><th>next</th><th>files</th><th>reviews</th><th>plan</th></tr>` +
+    history.map(h => `<tr><td>${h.step}</td><td>${esc(h.status)}</td><td>${esc(h.next.join(',') || '—')}</td><td>${h.files}</td><td>${h.review_attempts}</td><td class="dimtxt">${esc(h.plan)}</td></tr>`).join('') + '</table>');
+}
+
+// ------------------------------------------------------------------ input handling
+let menuSel = 0;
+function menuItems() { const v = input.value; if (!v.startsWith('/') || v.includes(' ') || v.includes('\n')) return []; return Object.keys(COMMANDS).filter(c => c.startsWith(v)); }
+function renderMenu() {
+  const items = menuItems(); const m = $('#menu');
+  if (!items.length) { m.style.display = 'none'; return; }
+  menuSel = Math.min(menuSel, items.length - 1);
+  m.innerHTML = items.map((c, i) => `<div class="${i === menuSel ? 'sel' : ''}" data-c="${c}"><span class="c">${c}</span><span class="d">${esc(COMMANDS[c][0])}</span></div>`).join('');
+  m.style.display = 'block';
+}
+$('#menu').onclick = e => { const c = e.target.closest('[data-c]')?.dataset.c; if (c) { input.value = c + ' '; renderMenu(); input.focus(); } };
+function autosize() { input.style.height = '22px'; input.style.height = Math.min(input.scrollHeight, 240) + 'px'; }
+input.addEventListener('input', () => { autosize(); menuSel = 0; renderMenu(); });
+input.addEventListener('keydown', e => {
+  const items = menuItems();
+  if (items.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); menuSel = (menuSel + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length; renderMenu(); return; }
+  if (items.length && e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); input.value = items[menuSel] + ' '; renderMenu(); return; }
+  if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); setMode(MODES[(MODES.indexOf(S.mode) + 1) % MODES.length]); return; }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (items.length && input.value.trim() !== items[menuSel]) { input.value = items[menuSel]; }
+    submit();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (S.abort) S.abort.abort(); $('#menu').style.display = 'none'; }
+  if (S.pending && !S.running && document.activeElement === input && !input.value && (e.key === '1' || e.key === '2')) {
+    e.preventDefault(); decide(e.key === '1' ? 'approve' : 'reject', '');
+  }
+});
+
+async function submit() {
+  const text = input.value.trim();
+  if (!text) return;
+  if (text.startsWith('/')) {
+    const [cmd, ...rest] = text.split(' ');
+    const c = COMMANDS[cmd];
+    input.value = ''; autosize(); renderMenu();
+    return c ? c[1](rest.join(' ').trim()) : note('Unknown command ' + esc(cmd) + ' — try /help', 'red');
+  }
+  if (S.running) return;
+  input.value = ''; autosize(); renderMenu();
+  add(esc(text), 'blk user');
+  if (S.pending) return decide('reject', text);
+  if (S.mode === 'chat') return runChat(text);
+  if (S.mode === 'bugbot') return runBugbot(text);
+  return runAgent(text);
+}
+
+// ------------------------------------------------------------------ boot
+(async () => {
+  try {
+    const c = await (await fetch('/api/config')).json();
+    S.defaultModel = c.model;
+    $('#cwd').textContent = 'cwd: ' + c.workspace;
+    if (!c.has_key) note('OPENROUTER_API_KEY not found — add it to the .env one level above codegen/ and restart.', 'red');
+  } catch { note('Backend not reachable — start it with: python server.py', 'red'); }
+  if ($('#editcode').value) toggleEdit(true);
+  renderStatus(); refreshFiles(); input.focus();
+})();
+</script>
+</body>
+</html>
