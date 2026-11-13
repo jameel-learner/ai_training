@@ -1,0 +1,14 @@
+# CPU-only PyTorch: the default Linux build drags in ~3GB of NVIDIA GPU libraries
+# that neither a laptop without a GPU nor Streamlit Community Cloud can use.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+
+streamlit>=1.43
+transformers>=4.45,<5
+huggingface_hub>=0.34,<1.0
+diffusers>=0.30,<0.36
+accelerate
+python-dotenv
+pillow
+numpy
+soundfile

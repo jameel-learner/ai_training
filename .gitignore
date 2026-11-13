@@ -10,3 +10,6 @@ sprint5/codegen/workspace/
 
 # Secrets
 .env
+
+# Streamlit secrets
+.streamlit/secrets.toml
