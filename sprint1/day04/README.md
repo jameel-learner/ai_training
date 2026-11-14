@@ -4,6 +4,10 @@ This folder contains a small chatbot that can **read, see, listen, speak and dra
 This guide explains what "multimodal AI" means and how this chatbot does it.
 You don't need to be able to code to follow it.
 
+> 📓 **Prefer to see the code in action?** The
+> [walkthrough notebook](https://colab.research.google.com/github/jameel-learner/ai_training/blob/main/sprint1/day04/multimodal_chatbot_walkthrough.ipynb)
+> runs each part of the chatbot step by step in Google Colab, in your browser, with nothing to install.
+
 ---
 
 ## 1. What does "multimodal" mean?
@@ -377,6 +381,7 @@ The first visit after the app has been asleep takes a few minutes while the mode
 | `multimodal_chatbot.py` | The whole chatbot. Each specialist is a short, clearly named section (`chat_reply`, `vision_reply`, `caption_image`, `transcribe`, `speak`, `generate_image`). The cloud "lite" switch is near the top (`IS_CLOUD`). |
 | `requirements.txt` | The list of free software libraries the chatbot needs. Streamlit Cloud reads this file to install them. |
 | `secrets.toml.example` | A template showing how to give the cloud app your Hugging Face token. |
+| `multimodal_chatbot_walkthrough.ipynb` | A step-by-step **Google Colab notebook** that runs each specialist on its own, with plain-English notes. Nothing to install. [Open it in Colab](https://colab.research.google.com/github/jameel-learner/ai_training/blob/main/sprint1/day04/multimodal_chatbot_walkthrough.ipynb). |
 
 The screen itself (chat bubbles, sidebar, microphone button) is built with **Streamlit**,
 a tool that turns a short Python script into a web page. That's why one command,
