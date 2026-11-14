@@ -374,7 +374,109 @@ The first visit after the app has been asleep takes a few minutes while the mode
 
 ---
 
-## 9. For the curious: where things live
+## 9. Run the walkthrough notebook
+
+`multimodal_chatbot_walkthrough.ipynb` runs each specialist on its own, with plain-English notes.
+It's a good way to see the code in action before (or instead of) running the full app.
+A **notebook** is a document that mixes explanations with small blocks of code you run one at a time.
+
+There are four places to run it. **For most people, option A is all you need.**
+
+| Option | Where the code runs | Cost | Setup |
+|---|---|---|---|
+| **A. Google Colab** | Google's servers | Free | None, just a Google account |
+| **B. VS Code** | Your computer | Free | The VS Code setup from section 7 |
+| **C. Colab screen + your computer** | Your computer | Free | Section 7, plus one extra command |
+| **D. Google Cloud** | Your own Google Cloud project | Paid (per hour) | A Google Cloud account with billing |
+
+### A. Google Colab (free, nothing to install) ⭐
+1. Open the notebook in Colab:
+   **[Open in Colab](https://colab.research.google.com/github/jameel-learner/ai_training/blob/main/sprint1/day04/multimodal_chatbot_walkthrough.ipynb)**
+2. Sign in with a Google account if asked.
+3. *(Optional, faster image generation)* **Runtime → Change runtime type → T4 GPU → Save**.
+   The free GPU isn't always available, but the notebook also works without it.
+4. Run the cells from top to bottom with ▶️, or choose **Runtime → Run all**.
+   If Colab warns *"This notebook was not authored by Google"*, click **Run anyway**.
+5. If the setup cell shows a **Restart session** button, click it, then carry on from the next cell.
+
+Your changes aren't saved unless you choose **File → Save a copy in Drive**.
+
+### B. In VS Code, on your own computer
+This uses the `.venv` workspace from section 7, which already has everything the notebook needs.
+1. Finish **steps 1–5 of section 7** if you haven't already.
+2. In VS Code's **Extensions** panel, install **Jupyter** (by Microsoft).
+3. Open `sprint1/day04/multimodal_chatbot_walkthrough.ipynb` from the file list on the left.
+4. Click **Select Kernel** (top right) → **Python Environments** → **.venv**.
+   If VS Code asks to install **ipykernel**, click **Install**.
+5. Click **Run All**, or run the cells one by one with ▶️.
+
+> 💬 **Prompt:**
+> ```
+> Help me run sprint1/day04/multimodal_chatbot_walkthrough.ipynb in VS Code using the
+> .venv environment. Install anything that's missing (the Jupyter extension, ipykernel)
+> and tell me which buttons to click.
+> ```
+
+### C. Colab's screen, running on your own computer
+You keep Colab's familiar look, but the code runs on your laptop. This is useful if Colab's free
+machines are busy, or if you've already downloaded the models.
+1. Finish **steps 1–5 of section 7** if you haven't already.
+2. In a VS Code terminal where the line starts with `(.venv)`, install Jupyter once:
+   ```
+   pip install notebook
+   ```
+3. Start it (do this every time):
+   ```
+   jupyter notebook --ServerApp.allow_origin="https://colab.research.google.com" --port=8888 --ServerApp.port_retries=0 --no-browser
+   ```
+4. Copy the link it prints, the one starting with `http://localhost:8888/?token=`.
+5. Open the notebook with the **Open in Colab** link in option A. Click the **▾ next to Connect**
+   (top right) → **Connect to a local runtime**, paste the link, and click **Connect**.
+6. Run the cells as usual. **Keep the terminal open** while you work, and press **Ctrl+C** in it when you're done.
+
+> 💬 **Prompt:**
+> ```
+> Start a Jupyter server from the .venv environment that Google Colab can connect to as a
+> local runtime (allow origin https://colab.research.google.com, port 8888), and give me
+> the link with the token to paste into Colab's "Connect to a local runtime" box.
+> ```
+
+### D. Google Cloud (paid, for teams or guaranteed machines)
+Only needed if your organisation wants its own machines, team access or data controls.
+These steps cost money while a machine is running.
+
+**Colab Enterprise** (the same Colab screen, inside your own Google Cloud project):
+1. In the [Google Cloud console](https://console.cloud.google.com), create or pick a project and **turn on billing**.
+2. Go to **Vertex AI → Colab Enterprise** and click **Enable** on the services it asks for.
+3. Under **Runtime templates**, click **New template**. A sensible choice is machine type
+   `e2-standard-4` (16 GB memory), plus an **NVIDIA T4** GPU if you want fast image generation.
+4. Under **My notebooks**, click **Import**, choose **URL**, and paste:
+   `https://github.com/jameel-learner/ai_training/blob/main/sprint1/day04/multimodal_chatbot_walkthrough.ipynb`
+5. Open the notebook, click **Connect** → **Connect to a runtime** → **Create new runtime** with your template,
+   then click **Run all**.
+6. 💰 **When you're finished, delete the runtime** on the **Runtimes** tab so you stop paying for it.
+   Idle runtimes also shut down automatically after a while.
+
+**Vertex AI Workbench** (a full JupyterLab workspace):
+1. Go to **Vertex AI → Workbench → Create new** and choose a machine like the one above.
+2. When it's ready, click **Open JupyterLab**, then **Git → Clone a repository**, and paste
+   `https://github.com/jameel-learner/ai_training.git`.
+3. Open `sprint1/day04/multimodal_chatbot_walkthrough.ipynb` and run it.
+4. 💰 **Stop the instance** when you're finished. It's billed while it's running.
+
+> ℹ️ Google renames console menus from time to time. If a menu name doesn't match exactly,
+> search for *Colab Enterprise* or *Workbench* in the console's search bar.
+
+### Good to know (all options)
+- **The first run of each section downloads its model**, about 5 GB in total. Later runs are quicker.
+- **The two "upload your own" cells only work on Google's Colab servers** (options A and D's Colab Enterprise).
+  On your own computer (options B and C), put a direct image link in `IMAGE_URL` instead.
+- **Section 7 (the Artist) frees up memory** by unloading the other specialists. To use them again,
+  re-run their sections.
+
+---
+
+## 10. For the curious: where things live
 
 | File | What's in it |
 |---|---|
